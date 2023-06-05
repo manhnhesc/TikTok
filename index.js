@@ -58,18 +58,35 @@ const generateUrlProfile = (username) => {
     return baseUrl;
 };
 
-const downloadMediaFromList = (listVideo) =>{
+const downloadMediaFromList = (listVideo) => {
     let c = 5;
+    let threads = [];
+    let results = [];
     let l = Math.ceil(listVideo.length / c);
     for (let i = 0; i < l; i++) {
         let elements = [];
         if (i == 0) {
-          elements = listVideo.slice(i, 5);
+            elements = listVideo.slice(i, 5);
         } else {
-          elements = listVideo.slice(i * 5, (i + 1) * 5);
+            elements = listVideo.slice(i * 5, (i + 1) * 5);
         }
+        threads.add(new Worker('./downloader', elements));
         console.log(elements);
-      }
+    }
+    for (let worker of threads) {
+        worker.on('error', (err) => { throw err; });
+        worker.on('exit', () => {
+            threads.delete(worker);
+            console.log(`Thread exiting, ${threads.size} running...`);
+            if (threads.size === 0) {
+                results.push('\n');
+            }
+        })
+        worker.on('message', (msg) => {
+            results.push(msg);
+        });
+    }
+    return results;
 }
 
 
