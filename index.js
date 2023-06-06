@@ -18,6 +18,9 @@ headers.append('User-Agent', 'TikTok 26.2.0 rv:262018 (iPhone; iOS 14.4.2; en_US
 const headersWm = new Headers();
 headersWm.append('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36');
 
+//number videos per thread
+const c = 5;
+
 const getChoice = () => new Promise((resolve, reject) => {
     inquirer.prompt([
         {
@@ -60,9 +63,9 @@ const generateUrlProfile = (username) => {
 };
 
 const downloadMediaFromList = async (listVideo) => {
-    console.log(chalk.green(`[!] Found ${listVideo.length} media for downloading`))
+    console.log(chalk.yellow(`[!] Found ${listVideo.length} media for downloading`))
     if (listVideo != undefined && listVideo.length > 0) {
-        let c = 5;
+        
         const threads = new Set();
         var results = [];
         let l = Math.ceil(listVideo.length / c);
@@ -85,7 +88,7 @@ const downloadMediaFromList = async (listVideo) => {
                 }
             })
             worker.on('message', (msg) => {
-                console.log(chalk.green(`[-] Thread downloader ${worker.threadId} running...`));
+                console.log(chalk.green(`[+] Thread downloader ${worker.threadId} running...`));
                 results.push(msg);
             });
 
@@ -97,19 +100,18 @@ const downloadMediaFromList = async (listVideo) => {
 const workerRunning = async (worker) => {
     let threadId = worker.threadId;
     return new Promise((resolve) => {
-        worker.on('error', (err) => { throw err; });
+        worker.on('error', (err) => { chalk.red(`[x] Thread exiting, worker ${threadId} error: ${err}`); });
         worker.on('message', (msg) => {
             console.log(chalk.green(`[+] Thread exiting, worker ${threadId} running...`));
             resolve(msg);
         });
         worker.on('exit', () => {
-            console.log(chalk.green(`[-] Thread exiting, worker ${threadId} exitting...`));
+            console.log(chalk.red(`[-] Thread exiting, worker ${threadId} exitting...`));
         })
     });
 }
 
 const getMediaInfoFromList = async (listVideo, type) => {
-    let c = 1;
     var threads1 = []
     var threads2 = [];
     var results = [];
@@ -128,13 +130,13 @@ const getMediaInfoFromList = async (listVideo, type) => {
     }
 
     if (threads1.length > 0) {
-        console.log(chalk.green(`[!] Total thread count: ${threads1.length}`));
+        console.log(chalk.yellow(`[!] Total thread count: ${threads1.length}`));
         for (let worker of threads1) {
             console.log(chalk.green(`[+] Thread ${worker.threadId} submit`));
             let t = await workerRunning(worker);
             // console.log(t);
             if (t != undefined) {
-                console.log(chalk.green(`[!] Thread ${worker.threadId} found ${t.length} media`));
+                console.log(chalk.yellow(`[!] Thread ${worker.threadId} found ${t.length} media`));
                 results = results.concat(t);
             }
             else
@@ -145,7 +147,12 @@ const getMediaInfoFromList = async (listVideo, type) => {
         for (let worker of threads2) {
             console.log(`[+] Thread ${worker.threadId} submit`);
             let t = await workerRunning(worker);
-            results = results.concat(t);
+            if (t != undefined) {
+                console.log(chalk.yellow(`[!] Thread ${worker.threadId} found ${t.length} media`));
+                results = results.concat(t);
+            }
+            else
+                console.log(chalk.red(`[+] Thread ${worker.threadId} not found media`));
 
         }
     }
@@ -165,20 +172,20 @@ const getListVideoByUsername = async (username) => {
     );
     await page.goto(baseUrl)
     var listVideo = []
-    console.log(chalk.green("[*] Getting list video from: " + username))
+    console.log(chalk.green("[+] Getting list video from: " + username))
     var loop = true
     while (loop) {
         listVideo = await page.evaluate(() => {
             const listVideo = Array.from(document.querySelectorAll(".tiktok-yz6ijl-DivWrapper > a"));
             return listVideo.map(item => item.href);
         });
-        console.log(chalk.green(`[*] ${listVideo.length} video found`))
+        console.log(chalk.yellow(`[!] ${listVideo.length} video found`))
         previousHeight = await page.evaluate("document.body.scrollHeight");
         await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
         await page.waitForFunction(`document.body.scrollHeight > ${previousHeight}`, { timeout: 10000 })
             .catch(() => {
                 console.log(chalk.red("[X] No more video found"));
-                console.log(chalk.green(`[*] Total video found: ${listVideo.length}`))
+                console.log(chalk.yellow(`[!] Total video found: ${listVideo.length}`))
                 loop = false
             });
         await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -193,7 +200,7 @@ const getRedirectUrl = async (url) => {
             follow: 10,
         });
         url = url.url;
-        console.log(chalk.green("[*] Redirecting to: " + url));
+        console.log(chalk.yellow("[!] Redirecting to: " + url));
     }
     return url;
 }
@@ -209,7 +216,7 @@ const getRedirectUrl = async (url) => {
         const username = usernameInput.input;
         listVideo = await getListVideoByUsername(username);
         if (listVideo.length === 0) {
-            console.log(chalk.yellow("[!] Error: No video found"));
+            console.log(chalk.red("[x] Error: No video found"));
             exit();
         }
     } else if (choice.choice === "Mass Download with (txt)") {
@@ -231,7 +238,7 @@ const getRedirectUrl = async (url) => {
 
         for await (const line of rl) {
             urls.push(line);
-            console.log(chalk.green(`[*] Found URL: ${line}`));
+            console.log(chalk.yellow(`[!] Found URL: ${line}`));
         }
 
 
@@ -245,7 +252,7 @@ const getRedirectUrl = async (url) => {
         listVideo.push(url);
     }
 
-    console.log(chalk.green(`[!] Found ${listVideo.length} video`));
+    console.log(chalk.yellow(`[!] Found ${listVideo.length} video`));
 
     //send to getter function
 
@@ -256,7 +263,7 @@ const getRedirectUrl = async (url) => {
 
     // }
     var data = await getMediaInfoFromList(listVideo, choice.type);
-    listMedia.push(data);
+    listMedia = listMedia.concat(data);
 
     //send to downloader function
     downloadMediaFromList(listMedia)
