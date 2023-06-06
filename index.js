@@ -4,11 +4,12 @@ import inquirer from 'inquirer';
 import fs from 'fs';
 import puppeteer from 'puppeteer';
 import { exit } from 'process';
-import { resolve } from 'path';
-import { reject } from 'lodash';
+// import { resolve } from 'path';
+// import pkg from 'lodash';
+// const { reject } = pkg;
 import { Headers } from 'node-fetch';
 import readline from 'readline';
-import { Worker, workerData } from 'worker_threads';
+import { Worker } from 'worker_threads';
 
 
 //adding useragent to avoid ip bans
@@ -58,81 +59,100 @@ const generateUrlProfile = (username) => {
     return baseUrl;
 };
 
-const downloadMediaFromList = (listVideo) => {
-    let c = 5;
-    let threads = [];
-    let results = [];
+const downloadMediaFromList = async (listVideo) => {
+    console.log(chalk.green(`[!] Found ${listVideo.length} media for downloading`))
+    if (listVideo != undefined && listVideo.length > 0) {
+        let c = 5;
+        const threads = new Set();
+        var results = [];
+        let l = Math.ceil(listVideo.length / c);
+        for (let i = 0; i < l; i++) {
+            let elements = [];
+            if (i == 0) {
+                elements = listVideo.slice(i, 5);
+            } else {
+                elements = listVideo.slice(i * 5, (i + 1) * 5);
+            }
+            threads.add(new Worker('./downloader', { workerData: elements }));
+        }
+        for (let worker of threads) {
+            worker.on('error', (err) => { throw err; });
+            worker.on('exit', () => {
+                console.log(chalk.green(`[+] Thread downloader ${worker.threadId} exiting...`));
+                threads.delete(worker);
+                if (threads.size === 0) {
+                    results.push('\n');
+                }
+            })
+            worker.on('message', (msg) => {
+                console.log(chalk.green(`[-] Thread downloader ${worker.threadId} running...`));
+                results.push(msg);
+            });
+
+        }
+    }
+    return results;
+}
+
+const workerRunning = async (worker) => {
+    let threadId = worker.threadId;
+    return new Promise((resolve) => {
+        worker.on('error', (err) => { throw err; });
+        worker.on('message', (msg) => {
+            console.log(chalk.green(`[+] Thread exiting, worker ${threadId} running...`));
+            resolve(msg);
+        });
+        worker.on('exit', () => {
+            console.log(chalk.green(`[-] Thread exiting, worker ${threadId} exitting...`));
+        })
+    });
+}
+
+const getMediaInfoFromList = async (listVideo, type) => {
+    let c = 1;
+    var threads1 = []
+    var threads2 = [];
+    var results = [];
     let l = Math.ceil(listVideo.length / c);
     for (let i = 0; i < l; i++) {
         let elements = [];
         if (i == 0) {
-            elements = listVideo.slice(i, 5);
+            elements = listVideo.slice(i, c);
         } else {
-            elements = listVideo.slice(i * 5, (i + 1) * 5);
+            elements = listVideo.slice(i * c, (i + 1) * c);
         }
-        threads.add(new Worker('./downloader', elements));
-        console.log(elements);
+        if (type == "With Watermark")
+            threads1.push(new Worker('./fullWatermarkGetter', { workerData: elements }));
+        else
+            threads2.push(new Worker('./noWatermarkGetter', { workerData: elements }))
     }
-    for (let worker of threads) {
-        worker.on('error', (err) => { throw err; });
-        worker.on('exit', () => {
-            threads.delete(worker);
-            console.log(`Thread exiting, ${threads.size} running...`);
-            if (threads.size === 0) {
-                results.push('\n');
+
+    if (threads1.length > 0) {
+        console.log(chalk.green(`[!] Total thread count: ${threads1.length}`));
+        for (let worker of threads1) {
+            console.log(chalk.green(`[+] Thread ${worker.threadId} submit`));
+            let t = await workerRunning(worker);
+            // console.log(t);
+            if (t != undefined) {
+                console.log(chalk.green(`[!] Thread ${worker.threadId} found ${t.length} media`));
+                results = results.concat(t);
             }
-        })
-        worker.on('message', (msg) => {
-            results.push(msg);
-        });
+            else
+                console.log(chalk.red(`[+] Thread ${worker.threadId} not found media`));
+        }
+    }
+    if (threads2.length > 0) {
+        for (let worker of threads2) {
+            console.log(`[+] Thread ${worker.threadId} submit`);
+            let t = await workerRunning(worker);
+            results = results.concat(t);
+
+        }
     }
     return results;
 }
 
 
-const getVideoWM = async (url) => {
-    const idVideo = await getIdVideo(url)
-    const API_URL = `https://api16-normal-c-useast1a.tiktokv.com/aweme/v1/feed/?aweme_id=${idVideo}`;
-    const request = await fetch(API_URL, {
-        method: "GET",
-        headers: headers
-    });
-    const body = await request.text();
-    try {
-        var res = JSON.parse(body);
-    } catch (err) {
-        console.error("Error:", err);
-        console.error("Response body:", body);
-    }
-    const urlMedia = res.aweme_list[0].video.download_addr.url_list[0]
-    const data = {
-        url: urlMedia,
-        id: idVideo
-    }
-    return data
-}
-
-const getVideoNoWM = async (url) => {
-    const idVideo = await getIdVideo(url)
-    const API_URL = `https://api16-normal-c-useast1a.tiktokv.com/aweme/v1/feed/?aweme_id=${idVideo}`;
-    const request = await fetch(API_URL, {
-        method: "GET",
-        headers: headers
-    });
-    const body = await request.text();
-    try {
-        var res = JSON.parse(body);
-    } catch (err) {
-        console.error("Error:", err);
-        console.error("Response body:", body);
-    }
-    const urlMedia = res.aweme_list[0].video.play_addr.url_list[0]
-    const data = {
-        url: urlMedia,
-        id: idVideo
-    }
-    return data
-}
 
 const getListVideoByUsername = async (username) => {
     var baseUrl = await generateUrlProfile(username)
@@ -178,19 +198,9 @@ const getRedirectUrl = async (url) => {
     return url;
 }
 
-const getIdVideo = (url) => {
-    const matching = url.includes("/video/")
-    if (!matching) {
-        console.log(chalk.red("[X] Error: URL not found"));
-        exit();
-    }
-    const idVideo = url.substring(url.indexOf("/video/") + 7, url.length);
-    return (idVideo.length > 19) ? idVideo.substring(0, idVideo.indexOf("?")) : idVideo;
-}
+
 
 (async () => {
-    const header = "\r\n \/$$$$$$$$ \/$$$$$$ \/$$   \/$$ \/$$$$$$$$ \/$$$$$$  \/$$   \/$$       \/$$$$$$$   \/$$$$$$  \/$$      \/$$ \/$$   \/$$ \/$$        \/$$$$$$   \/$$$$$$  \/$$$$$$$  \/$$$$$$$$ \/$$$$$$$ \r\n|__  $$__\/|_  $$_\/| $$  \/$$\/|__  $$__\/\/$$__  $$| $$  \/$$\/      | $$__  $$ \/$$__  $$| $$  \/$ | $$| $$$ | $$| $$       \/$$__  $$ \/$$__  $$| $$__  $$| $$_____\/| $$__  $$\r\n   | $$     | $$  | $$ \/$$\/    | $$  | $$  \\ $$| $$ \/$$\/       | $$  \\ $$| $$  \\ $$| $$ \/$$$| $$| $$$$| $$| $$      | $$  \\ $$| $$  \\ $$| $$  \\ $$| $$      | $$  \\ $$\r\n   | $$     | $$  | $$$$$\/     | $$  | $$  | $$| $$$$$\/        | $$  | $$| $$  | $$| $$\/$$ $$ $$| $$ $$ $$| $$      | $$  | $$| $$$$$$$$| $$  | $$| $$$$$   | $$$$$$$\/\r\n   | $$     | $$  | $$  $$     | $$  | $$  | $$| $$  $$        | $$  | $$| $$  | $$| $$$$_  $$$$| $$  $$$$| $$      | $$  | $$| $$__  $$| $$  | $$| $$__\/   | $$__  $$\r\n   | $$     | $$  | $$\\  $$    | $$  | $$  | $$| $$\\  $$       | $$  | $$| $$  | $$| $$$\/ \\  $$$| $$\\  $$$| $$      | $$  | $$| $$  | $$| $$  | $$| $$      | $$  \\ $$\r\n   | $$    \/$$$$$$| $$ \\  $$   | $$  |  $$$$$$\/| $$ \\  $$      | $$$$$$$\/|  $$$$$$\/| $$\/   \\  $$| $$ \\  $$| $$$$$$$$|  $$$$$$\/| $$  | $$| $$$$$$$\/| $$$$$$$$| $$  | $$\r\n   |__\/   |______\/|__\/  \\__\/   |__\/   \\______\/ |__\/  \\__\/      |_______\/  \\______\/ |__\/     \\__\/|__\/  \\__\/|________\/ \\______\/ |__\/  |__\/|_______\/ |________\/|__\/  |__\/\r\n\n by n0l3r (https://github.com/n0l3r)\n"
-    console.log(chalk.blue(header))
     const choice = await getChoice();
     var listVideo = [];
     var listMedia = [];
@@ -206,7 +216,7 @@ const getIdVideo = (url) => {
         var urls = [];
         // Get URL from file
         const fileInput = await getInput("Enter the file path : ");
-        const file = fileInput.input;
+        const file = fileInput.input + '.txt';
 
         if (!fs.existsSync(file)) {
             console.log(chalk.red("[X] Error: File not found"));
@@ -237,18 +247,21 @@ const getIdVideo = (url) => {
 
     console.log(chalk.green(`[!] Found ${listVideo.length} video`));
 
+    //send to getter function
 
-    for (var i = 0; i < listVideo.length; i++) {
-        console.log(chalk.green(`[*] Downloading video ${i + 1} of ${listVideo.length}`));
-        console.log(chalk.green(`[*] URL: ${listVideo[i]}`));
-        var data = (choice.type == "With Watermark") ? await getVideoWM(listVideo[i]) : await getVideoNoWM(listVideo[i]);
+    // for (var i = 0; i < listVideo.length; i++) {
+    //     console.log(chalk.green(`[*] Downloading video ${i + 1} of ${listVideo.length}`));
+    //     console.log(chalk.green(`[*] URL: ${listVideo[i]}`));
+    //     var data = (choice.type == "With Watermark") ? await getVideoWM(listVideo[i]) : await getVideoNoWM(listVideo[i]);
 
-        listMedia.push(data);
-    }
+    // }
+    var data = await getMediaInfoFromList(listVideo, choice.type);
+    listMedia.push(data);
 
+    //send to downloader function
     downloadMediaFromList(listMedia)
         .then(() => {
-            console.log(chalk.green("[+] Downloaded successfully"));
+            console.log(chalk.green("[+] Sent download list successfully"));
         })
         .catch(err => {
             console.log(chalk.red("[X] Error: " + err));

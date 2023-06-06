@@ -1,5 +1,10 @@
-import { parentPort, workerData } from 'worker_threads';
+import { isMainThread, parentPort, workerData } from 'worker_threads';
 import { Headers } from 'node-fetch';
+import fetch from 'node-fetch';
+import { resolve } from 'path';
+import chalk from 'chalk';
+import pkg from 'lodash';
+const { reject } = pkg;
 import fs from 'fs';
 
 
@@ -10,26 +15,78 @@ headersWm.append('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleW
 
 
 const downloadMediaFromList = async (list) => {
-    var results = [];
+    var results = false;
     const folder = "downloads/"
     list.forEach((item) => {
-        const fileName = `${item.id}.mp4`
-        const downloadFile = fetch(item.url, { headers: headers });
-        const file = fs.createWriteStream(folder + fileName)
+        try {
 
-        downloadFile.then(res => {
-            res.body.pipe(file)
-            file.on("finish", () => {
-                file.close()
-                var log = resolve(item);
-                results.push(log);
-            });
-            file.on("error", (err) => {
-                var log = reject(err)
-                results.push(log);
-            });
-        });
+            if (item.url != undefined) {
+                const fileName = `${item.id}.mp4`
+                const downloadFile = fetch(item.url, { headers: headers });
+                const file = fs.createWriteStream(folder + fileName)
+                downloadFile.then(res => {
+                    res.body.pipe(file)
+                    file.on("finish", () => {
+                        file.close()
+                        console.log(chalk.green(`[+] ${resolve(fileName)} `));
+                    });
+                    file.on("error", (err) => {
+                        console.log(chalk.red(`[-] ${reject(err)} `));
+                    });
+
+                });
+                if (item.photo_urls != undefined && item.photo_urls.length > 0) {
+                    var c = 1;
+                    item.photo_urls.forEach(nestItem => {
+                        const fileName = `${item.id}_${c}.jpeg`
+                        const downloadFile = fetch(nestItem)
+                        const file = fs.createWriteStream(folder + fileName)
+
+                        downloadFile.then(res => {
+                            res.body.pipe(file);
+                            file.on("finish", () => {
+                                file.close();
+                                console.log(chalk.green(`[+] ${resolve(fileName)} `));
+                            });
+                            file.on("error", (err) => {
+                                console.log(chalk.red(`[-] ${reject(err)} `));
+                            });
+                        });
+                        c += 1;
+                    });
+                }
+
+
+            } else {
+                if (item.photo_urls != undefined && item.photo_urls.length > 0) {
+                    var c = 1;
+                    item.photo_urls.forEach(nestItem => {
+                        const fileName = `${item.id}_${c}.jpeg`
+                        const downloadFile = fetch(nestItem)
+                        const file = fs.createWriteStream(folder + fileName)
+
+                        downloadFile.then(res => {
+                            res.body.pipe(file);
+                            file.on("finish", () => {
+                                file.close()
+                                console.log(chalk.green(`[+] ${resolve(fileName)} `));
+                            });
+                            file.on("error", (err) => {
+                                console.log(chalk.red(`[-] ${reject(err)} `));
+                            });
+                        });
+                        c += 1;
+                    });
+                }
+            }
+
+        } catch (error) {
+            console.log(chalk.red(`[-] ${reject(error)} `));
+        }
     });
+    results = true;
+    return results;
 }
-
-parentPort.postMessage(await downloadMediaFromList(workerData));
+if (!isMainThread) {
+    parentPort.postMessage(await downloadMediaFromList(workerData));
+}
