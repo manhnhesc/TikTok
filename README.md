@@ -1,6 +1,7 @@
-<h1 style="align: center;">Tiktok Downloader</h1>
-
+<h1 style="align: center;">Tiktok Downloader Multithread</h1>
 <h2>Installation</h2>
+
+source code from https://github.com/n0l3r/tiktok-downloader.git with some change
 run in your terminal:
 
 ```
