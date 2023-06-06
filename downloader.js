@@ -16,7 +16,7 @@ headersWm.append('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleW
 
 const downloadMediaFromList = async (list) => {
     var results = false;
-    const folder = "./downloads/"
+    const folder = resolve() + "/downloads/"
     list.forEach((item) => {
         try {
 
