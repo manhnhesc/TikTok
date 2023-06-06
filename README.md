@@ -1,23 +1,24 @@
 <h1 style="align: center;">Tiktok Downloader Multithread</h1>
 <h2>Installation</h2>
 
-source code from https://github.com/n0l3r/tiktok-downloader.git with some change
-run in your terminal:
+source code from https://github.com/n0l3r/tiktok-downloader.git with some change, run in your terminal:
 
 ```
-git clone https://github.com/n0l3r/tiktok-downloader.git
+git clone https://github.com/manhnhesc/TikTok.git
 cd tiktok-downloader
 npm i
 node index
 ```
 
 <h2>Type</h2>
-<h3>Mass Download by Username</h3>
-input target username and download type
 
-<br>
 <h3>Mass Download by list url (txt)</h3>
 input list url and download type
+
+<br>
+
+<h3>Mass Download by Username</h3>
+input target username and download type
 
 <br>
 <h3>Download by url</h3>
