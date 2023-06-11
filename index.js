@@ -18,8 +18,7 @@ headers.append('User-Agent', 'TikTok 26.2.0 rv:262018 (iPhone; iOS 14.4.2; en_US
 const headersWm = new Headers();
 headersWm.append('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36');
 
-//number videos per thread
-const c = 5;
+
 
 const getChoice = () => new Promise((resolve, reject) => {
     inquirer.prompt([
@@ -65,16 +64,17 @@ const generateUrlProfile = (username) => {
 const downloadMediaFromList = async (listVideo) => {
     console.log(chalk.yellow(`[!] Found ${listVideo.length} media for downloading`))
     if (listVideo != undefined && listVideo.length > 0) {
-
+        //number videos per thread
+        const c = 5;
         const threads = new Set();
         var results = [];
         let l = Math.ceil(listVideo.length / c);
         for (let i = 0; i < l; i++) {
             let elements = [];
             if (i == 0) {
-                elements = listVideo.slice(i, 5);
+                elements = listVideo.slice(i, c);
             } else {
-                elements = listVideo.slice(i * 5, (i + 1) * 5);
+                elements = listVideo.slice(i * c, (i + 1) * c);
             }
             threads.add(new Worker('./downloader', { workerData: elements }));
         }
