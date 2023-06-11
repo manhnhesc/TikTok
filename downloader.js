@@ -87,7 +87,7 @@ const downloadMediaFromList = async (list) => {
             }
 
         } catch (error) {
-            console.log(chalk.red(`[-] ${reject(error)} `));
+            console.log(chalk.red(`[-] ${reject(error)} `));            
         }
     });
     results = true;
