@@ -1,8 +1,9 @@
+import chalk from 'chalk';
 import { isMainThread, parentPort, workerData } from 'worker_threads';
 import { Headers } from 'node-fetch';
 import fetch from 'node-fetch';
 import { resolve } from 'path';
-import chalk from 'chalk';
+
 import pkg from 'lodash';
 const { reject } = pkg;
 import fs from 'fs';
@@ -18,7 +19,7 @@ const downloadMediaFromList = async (list) => {
     var results = false;
     const folder = resolve() + "/downloads/";
 
-    if(!fs.existsSync(folder)){
+    if (!fs.existsSync(folder)) {
         fs.mkdirSync(folder);
     }
 
@@ -34,7 +35,7 @@ const downloadMediaFromList = async (list) => {
                     res.body.pipe(file)
                     file.on("finish", () => {
                         file.close()
-                        console.log(chalk.green(`[+] ${resolve(fileName)} `));
+                        console.log(chalk.green(`[+] Downloaded: ${resolve(fileName)} `));
                     });
                     file.on("error", (err) => {
                         console.log(chalk.red(`[-] ${reject(err)} `));
@@ -52,7 +53,7 @@ const downloadMediaFromList = async (list) => {
                             res.body.pipe(file);
                             file.on("finish", () => {
                                 file.close();
-                                console.log(chalk.green(`[+] ${resolve(fileName)} `));
+                                console.log(chalk.green(`[+] Downloaded: ${resolve(fileName)} `));
                             });
                             file.on("error", (err) => {
                                 console.log(chalk.red(`[-] ${reject(err)} `));
@@ -75,7 +76,7 @@ const downloadMediaFromList = async (list) => {
                             res.body.pipe(file);
                             file.on("finish", () => {
                                 file.close()
-                                console.log(chalk.green(`[+] ${resolve(fileName)} `));
+                                console.log(chalk.green(`[+] Downloaded: ${resolve(fileName)} `));
                             });
                             file.on("error", (err) => {
                                 console.log(chalk.red(`[-] ${reject(err)} `));
@@ -87,7 +88,7 @@ const downloadMediaFromList = async (list) => {
             }
 
         } catch (error) {
-            console.log(chalk.red(`[-] ${reject(error)} `));            
+            console.log(chalk.red(`[-] ${reject(error)} `));
         }
     });
     results = true;

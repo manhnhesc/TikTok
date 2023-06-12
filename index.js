@@ -4,10 +4,6 @@ import inquirer from 'inquirer';
 import fs from 'fs';
 import puppeteer from 'puppeteer';
 import { exit } from 'process';
-import PQueue from 'p-queue';
-// import { resolve } from 'path';
-// import pkg from 'lodash';
-// const { reject } = pkg;
 import { Headers } from 'node-fetch';
 import readline from 'readline';
 import { Worker } from 'worker_threads';
@@ -82,7 +78,7 @@ const downloadMediaFromList = async (listVideo) => {
         for (let worker of threads) {
             worker.on('error', (err) => { chalk.red(`[x] Thread downloader ${worker.threadId} error...\n`); });
             worker.on('exit', () => {
-                console.log(chalk.green(`[+] Thread downloader ${worker.threadId} exiting...`));
+                //console.log(chalk.green(`[+] Thread downloader ${worker.threadId} exiting...`));
                 threads.delete(worker);
                 if (threads.size === 0) {
                     results.push('\n');
@@ -98,73 +94,65 @@ const downloadMediaFromList = async (listVideo) => {
     return results;
 }
 
-const workerGetWatermarkRunning = async (data) => {
-    return new Promise((resolve) => {
-        try {
-            const worker = new Worker('./fullWatermarkGetter', { workerData: data });
-            worker.on('error', (err) => { console.log(chalk.red(`[x] Thread #${worker.threadId} error: ${err}`)); });
-            worker.on('message', (msg) => {
-                console.log(chalk.green(`[+] Thread #${worker.threadId} running...`));
-                resolve(msg);
-            });
-            worker.on('exit', (msg) => {
-                console.log(chalk.red(`[-] Thread #${worker.threadId} exiting...`));
-            });
-
-        } catch (error) {
-            console.log(chalk.red(`[x] Thread #${worker.threadId} error: ${error}`));
-        }
-    });
-}
-
-const workerGetNoWatermarkRunning = async (data) => {
-    return new Promise((resolve) => {
-        try {
-            const worker = new Worker('./noWatermarkGetter', { workerData: data });
-            worker.on('error', (err) => { console.log(chalk.red(`[x] Thread #${worker.threadId} error: ${err}`)); });
-            worker.on('message', (msg) => {
-                console.log(chalk.green(`[+] Thread #${worker.threadId} running...`));
-                resolve(msg);
-            });
-            worker.on('exit', (msg) => {
-                console.log(chalk.red(`[-] Thread exiting...`));
-            });
-
-        } catch (error) {
-            console.log(chalk.red(`[x] Thread #${worker.threadId} error: ${error}`));
-        }
-    });
-}
-
-
-
 const getMediaInfoFromList = async (listVideo, type) => {
-    return new Promise((resolve) => {
-        const c = 5;
-        let results = [];
-        let l = Math.ceil(listVideo.length / c);
-        const queue = new PQueue({ concurrency: 1 });
 
-        for (let i = 0; i < l; i++) {
-            let elements = [];
-            if (i == 0) {
-                elements = listVideo.slice(i, c);
-            } else {
-                elements = listVideo.slice(i * c, (i + 1) * c);
-            }
-            if (type == "With Watermark")
-                queue.add(() => workerGetWatermarkRunning(elements));
-            else
-                queue.add(() => workerGetNoWatermarkRunning(elements));
+    const c = 5;
+    var actions = [];
+    let results = [];
+    let l = Math.ceil(listVideo.length / c);
+    
+    for (let i = 0; i < l; i++) {
+        let elements = [];
+        if (i == 0) {
+            elements = listVideo.slice(i, c);
+        } else {
+            elements = listVideo.slice(i * c, (i + 1) * c);
         }
-        queue.on('completed', qResult => {
-            results = results.concat(qResult);
-            resolve(results)
+        if (type == "With Watermark")
+            actions.push(new Promise((resolve) => {
+                const worker = new Worker('./fullWatermarkGetter', { workerData: elements });
+                try {
+                    worker.on('error', (err) => { console.log(chalk.red(`[x] Thread #${worker.threadId} error: ${err}`)); });
+                    worker.on('message', (msg) => {
+                        console.log(chalk.green(`[+] Thread #${worker.threadId} running...`));
+                        resolve(msg);
+                    });
+                    worker.on('exit', (msg) => {
+                        console.log(chalk.red(`[-] Thread #${worker.threadId} exiting...`));
+                    });
+
+                } catch (error) {
+                    console.log(chalk.red(`[x] Thread #${worker.threadId} error: ${error}`));
+                }
+            }));
+        else
+            actions.push(new Promise((resolve) => {
+                const worker = new Worker('./noWatermarkGetter', { workerData: elements });
+                try {
+                    worker.on('error', (err) => { console.log(chalk.red(`[x] Thread #${worker.threadId} error: ${err}`)); });
+                    worker.on('message', (msg) => {
+                        console.log(chalk.green(`[+] Thread #${worker.threadId} running...`));
+                        resolve(msg);
+                    });
+                    worker.on('exit', (msg) => {
+                        console.log(chalk.red(`[-] Thread exiting...`));
+                    });
+
+                } catch (error) {
+                    console.log(chalk.red(`[x] Thread #${worker.threadId} error: ${error}`));
+                }
+            }));
+    }
+    var p = Promise.all(actions).then(r => {
+        let a = [];
+        r.forEach(e => {
+            a = a.concat(e);
         });
+        return a;
     });
+    results = await p.then(x => { return x; });
+    return results;
 }
-
-
 
 const getListVideoByUsername = async (username) => {
     var baseUrl = await generateUrlProfile(username)
@@ -209,8 +197,6 @@ const getRedirectUrl = async (url) => {
     }
     return url;
 }
-
-
 
 (async () => {
     const choice = await getChoice();
@@ -259,15 +245,7 @@ const getRedirectUrl = async (url) => {
 
     console.log(chalk.yellow(`[!] Found ${listVideo.length} video`));
 
-    //send to getter function
-
-    // for (var i = 0; i < listVideo.length; i++) {
-    //     console.log(chalk.green(`[*] Downloading video ${i + 1} of ${listVideo.length}`));
-    //     console.log(chalk.green(`[*] URL: ${listVideo[i]}`));
-    //     var data = (choice.type == "With Watermark") ? await getVideoWM(listVideo[i]) : await getVideoNoWM(listVideo[i]);
-
-    // }
-    var data = await getMediaInfoFromList(listVideo, choice.type).then(x => { return x; });
+    var data = await getMediaInfoFromList(listVideo, choice.type);//.then(x => { return x; });
     listMedia = listMedia.concat(data);
 
     //send to downloader function
