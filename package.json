@@ -76,7 +76,8 @@
     "wcwidth": "^1.0.1",
     "webidl-conversions": "^3.0.1",
     "whatwg-url": "^5.0.0",
-    "wrap-ansi": "^7.0.0"
+    "wrap-ansi": "^7.0.0",
+    "p-queue": "^7.3.4"
   },
   "scripts": {
     "update-contrib": "weallcontribute -o . && git add CONTRIBUTING.md && git commit -m 'docs(contributing): updated CONTRIBUTING.md'",

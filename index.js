@@ -4,6 +4,7 @@ import inquirer from 'inquirer';
 import fs from 'fs';
 import puppeteer from 'puppeteer';
 import { exit } from 'process';
+import PQueue from 'p-queue';
 // import { resolve } from 'path';
 // import pkg from 'lodash';
 // const { reject } = pkg;
@@ -97,177 +98,70 @@ const downloadMediaFromList = async (listVideo) => {
     return results;
 }
 
-const workerRunning = async (worker) => {
-    let threadId = worker.threadId;
+const workerGetWatermarkRunning = async (data) => {
     return new Promise((resolve) => {
         try {
-            worker.on('error', (err) => { console.log(chalk.red(`[x] Thread #${threadId} error: ${err}`)); });
+            const worker = new Worker('./fullWatermarkGetter', { workerData: data });
+            worker.on('error', (err) => { console.log(chalk.red(`[x] Thread #${worker.threadId} error: ${err}`)); });
             worker.on('message', (msg) => {
-                console.log(chalk.green(`[+] Thread #${threadId} running...`));
+                console.log(chalk.green(`[+] Thread #${worker.threadId} running...`));
                 resolve(msg);
             });
             worker.on('exit', (msg) => {
-                console.log(chalk.red(`[-] Thread #${threadId} exiting...`));
+                console.log(chalk.red(`[-] Thread #${worker.threadId} exiting...`));
             });
 
         } catch (error) {
-            console.log(chalk.red(`[x] Thread #${threadId} error: ${error}`));
+            console.log(chalk.red(`[x] Thread #${worker.threadId} error: ${error}`));
         }
     });
 }
 
+const workerGetNoWatermarkRunning = async (data) => {
+    return new Promise((resolve) => {
+        try {
+            const worker = new Worker('./noWatermarkGetter', { workerData: data });
+            worker.on('error', (err) => { console.log(chalk.red(`[x] Thread #${worker.threadId} error: ${err}`)); });
+            worker.on('message', (msg) => {
+                console.log(chalk.green(`[+] Thread #${worker.threadId} running...`));
+                resolve(msg);
+            });
+            worker.on('exit', (msg) => {
+                console.log(chalk.red(`[-] Thread exiting...`));
+            });
+
+        } catch (error) {
+            console.log(chalk.red(`[x] Thread #${worker.threadId} error: ${error}`));
+        }
+    });
+}
+
+
+
 const getMediaInfoFromList = async (listVideo, type) => {
-    let threads1 = []
-    let threads2 = [];
-    let threads3 = [];
-    let threads4 = [];
-    let threads5 = [];
-    let results = [];
-    let l = Math.ceil(listVideo.length / 5);
+    return new Promise((resolve) => {
+        const c = 5;
+        let results = [];
+        let l = Math.ceil(listVideo.length / c);
+        const queue = new PQueue({ concurrency: 1 });
 
-    threads1 = listVideo.slice(0, l * 1);
-    threads2 = listVideo.slice(l * 1, l * 2);
-    threads3 = listVideo.slice(l * 2, l * 3);
-    threads4 = listVideo.slice(l * 3, l * 4);
-    threads5 = listVideo.slice(l * 4, l * 5);
-
-    // for (let i = 0; i < l; i++) {
-    //     let elements = [];
-    //     if (i == 0) {
-    //         elements = listVideo.slice(i, c);
-    //     } else {
-    //         elements = listVideo.slice(i * c, (i + 1) * c);
-    //     }
-    //     if (type == "With Watermark")
-    //         threads1.push(new Worker('./fullWatermarkGetter', { workerData: elements }));
-    //     else
-    //         threads2.push(new Worker('./noWatermarkGetter', { workerData: elements }))
-    // }
-
-
-
-
-    if (threads1.length > 0) {
-        console.log(chalk.green(`[+] Thread #1 ${threads1.length} url submit`));
-        if (type == "With Watermark") {
-            var worker = new Worker('./fullWatermarkGetter', { workerData: threads1 });
-            let t = await workerRunning(worker).then(x => { console.log(chalk.green(`[+] Thread #1 ID: ${worker.threadId} get data success.`)); return x; });
-            if (t != undefined) {
-                console.log(chalk.yellow(`[!] Thread #1 ID: ${worker.threadId} found ${t.length} media`));
-                results = results.concat(t);
+        for (let i = 0; i < l; i++) {
+            let elements = [];
+            if (i == 0) {
+                elements = listVideo.slice(i, c);
+            } else {
+                elements = listVideo.slice(i * c, (i + 1) * c);
             }
+            if (type == "With Watermark")
+                queue.add(() => workerGetWatermarkRunning(elements));
             else
-                console.log(chalk.red(`[+] Thread #1 ID: ${worker.threadId} not found media`));
+                queue.add(() => workerGetNoWatermarkRunning(elements));
         }
-        else {
-            var worker = new Worker('./noWatermarkGetter', { workerData: threads1 });
-            let t = await workerRunning(worker).then(x => { console.log(chalk.green(`[+] Thread #1 ID: ${worker.threadId} get data success.`)); return x; });
-            if (t != undefined) {
-                console.log(chalk.yellow(`[!] Thread #1 ID: ${worker.threadId} found ${t.length} media`));
-                results = results.concat(t);
-            }
-            else
-                console.log(chalk.red(`[+] Thread #1 ID: ${worker.threadId} not found media`));
-        }
-    }
-
-    if (threads2.length > 0) {
-        console.log(chalk.green(`[+] Thread #2 ${threads2.length} url submit`));
-        if (type == "With Watermark") {
-            var worker = new Worker('./fullWatermarkGetter', { workerData: threads2 });
-            let t = await workerRunning(worker).then(x => { console.log(chalk.green(`[+] Thread #2 ID: ${worker.threadId} get data success.`)); return x; });
-            if (t != undefined) {
-                console.log(chalk.yellow(`[!] Thread #2 ID: ${worker.threadId} found ${t.length} media`));
-                results = results.concat(t);
-            }
-            else
-                console.log(chalk.red(`[+] Thread #2 ID: ${worker.threadId} not found media`));
-        }
-        else {
-            var worker = new Worker('./noWatermarkGetter', { workerData: threads2 });
-            let t = await workerRunning(worker).then(x => { console.log(chalk.green(`[+] Thread #2 ID: ${worker.threadId} get data success.`)); return x; });
-            if (t != undefined) {
-                console.log(chalk.yellow(`[!] Thread #2 ID: ${worker.threadId} found ${t.length} media`));
-                results = results.concat(t);
-            }
-            else
-                console.log(chalk.red(`[+] Thread #2 ID: ${worker.threadId} not found media`));
-        }
-    }
-
-    if (threads3.length > 0) {
-        console.log(chalk.green(`[+] Thread #3 ${threads3.length} url submit`));
-        if (type == "With Watermark") {
-            var worker = new Worker('./fullWatermarkGetter', { workerData: threads3 });
-            let t = await workerRunning(worker).then(x => { console.log(chalk.green(`[+] Thread #3 ID: ${worker.threadId} get data success.`)); return x; });
-            if (t != undefined) {
-                console.log(chalk.yellow(`[!] Thread #3 ID: ${worker.threadId} found ${t.length} media`));
-                results = results.concat(t);
-            }
-            else
-                console.log(chalk.red(`[+] Thread #3 ID: ${worker.threadId} not found media`));
-        }
-        else {
-            var worker = new Worker('./noWatermarkGetter', { workerData: threads3 });
-            let t = await workerRunning(worker).then(x => { console.log(chalk.green(`[+] Thread #3 ID: ${worker.threadId} get data success.`)); return x; });
-            if (t != undefined) {
-                console.log(chalk.yellow(`[!] Thread #3 ID: ${worker.threadId} found ${t.length} media`));
-                results = results.concat(t);
-            }
-            else
-                console.log(chalk.red(`[+] Thread #3 ID: ${worker.threadId} not found media`));
-        }
-    }
-
-    if (threads4.length > 0) {
-        console.log(chalk.green(`[+] Thread #4 ${threads4.length} url submit`));
-        if (type == "With Watermark") {
-            var worker = new Worker('./fullWatermarkGetter', { workerData: threads4 });
-            let t = await workerRunning(worker).then(x => { console.log(chalk.green(`[+] Thread #4 ID: ${worker.threadId} get data success.`)); return x; });
-            if (t != undefined) {
-                console.log(chalk.yellow(`[!] Thread #4 ID: ${worker.threadId} found ${t.length} media`));
-                results = results.concat(t);
-            }
-            else
-                console.log(chalk.red(`[+] Thread #4 ID: ${worker.threadId} not found media`));
-        }
-        else {
-            var worker = new Worker('./noWatermarkGetter', { workerData: threads4 });
-            let t = await workerRunning(worker).then(x => { console.log(chalk.green(`[+] Thread #4 ID: ${worker.threadId} get data success.`)); return x; });
-            if (t != undefined) {
-                console.log(chalk.yellow(`[!] Thread #4 ID: ${worker.threadId} found ${t.length} media`));
-                results = results.concat(t);
-            }
-            else
-                console.log(chalk.red(`[+] Thread #4 ID: ${worker.threadId} not found media`));
-        }
-    }
-
-    if (threads5.length > 0) {
-        console.log(chalk.green(`[+] Thread #5 ${threads5.length} url submit`));
-        if (type == "With Watermark") {
-            var worker = new Worker('./fullWatermarkGetter', { workerData: threads5 });
-            let t = await workerRunning(worker).then(x => { console.log(chalk.green(`[+] Thread #5 ID: ${worker.threadId} get data success.`)); return x; });
-            if (t != undefined) {
-                console.log(chalk.yellow(`[!] Thread #5 ID: ${worker.threadId} found ${t.length} media`));
-                results = results.concat(t);
-            }
-            else
-                console.log(chalk.red(`[+] Thread #5 ID: ${worker.threadId} not found media`));
-        }
-        else {
-            var worker = new Worker('./noWatermarkGetter', { workerData: threads5 });
-            let t = await workerRunning(worker).then(x => { console.log(chalk.green(`[+] Thread #5 ID: ${worker.threadId} get data success.`)); return x; });
-            if (t != undefined) {
-                console.log(chalk.yellow(`[!] Thread #5 ID: ${worker.threadId} found ${t.length} media`));
-                results = results.concat(t);
-            }
-            else
-                console.log(chalk.red(`[+] Thread #5 ID: ${worker.threadId} not found media`));
-        }
-    }
-
-    return results;
+        queue.on('completed', qResult => {
+            results = results.concat(qResult);
+            resolve(results)
+        });
+    });
 }
 
 
@@ -373,11 +267,11 @@ const getRedirectUrl = async (url) => {
     //     var data = (choice.type == "With Watermark") ? await getVideoWM(listVideo[i]) : await getVideoNoWM(listVideo[i]);
 
     // }
-    var data = await getMediaInfoFromList(listVideo, choice.type);
+    var data = await getMediaInfoFromList(listVideo, choice.type).then(x => { return x; });
     listMedia = listMedia.concat(data);
 
     //send to downloader function
-    if (listMedia.length > 0)
+    if (listMedia != undefined && listMedia.length > 0)
         downloadMediaFromList(listMedia)
             .then(() => {
                 console.log(chalk.green("[+] Sent download list successfully"));
