@@ -1,12 +1,12 @@
-import chalk from 'chalk';
 import { isMainThread, parentPort, workerData } from 'worker_threads';
+import chalk from 'chalk';
 import { Headers } from 'node-fetch';
 import fetch from 'node-fetch';
 import { resolve } from 'path';
-
 import pkg from 'lodash';
 const { reject } = pkg;
 import fs from 'fs';
+
 
 
 const headers = new Headers();

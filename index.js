@@ -100,7 +100,7 @@ const getMediaInfoFromList = async (listVideo, type) => {
     var actions = [];
     let results = [];
     let l = Math.ceil(listVideo.length / c);
-    
+
     for (let i = 0; i < l; i++) {
         let elements = [];
         if (i == 0) {
@@ -158,31 +158,43 @@ const getListVideoByUsername = async (username) => {
     var baseUrl = await generateUrlProfile(username)
     const browser = await puppeteer.launch({
         headless: false,
-    })
+        args: [`--window-size=800,600`],
+        defaultViewport: {
+            width: 800,
+            height: 600
+        }
+    });
     const page = await browser.newPage()
     page.setUserAgent(
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4182.0 Safari/537.36"
+        //"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4182.0 Safari/537.36"
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36"
     );
-    await page.goto(baseUrl)
-    var listVideo = []
-    console.log(chalk.green("[+] Getting list video from: " + username))
+    await page.goto(baseUrl);
+    var listVideo = [];
+    
+    console.log(chalk.green("[+] Getting list video from: " + username));
+    //console.log(chalk.green("[+] Verification capcha time: 10s"));
+
     var loop = true
     while (loop) {
         listVideo = await page.evaluate(() => {
-            const listVideo = Array.from(document.querySelectorAll(".tiktok-yz6ijl-DivWrapper > a"));
-            return listVideo.map(item => item.href);
+            //const listVideo = Array.from(document.querySelectorAll(".tiktok-yz6ijl-DivWrapper > a"));
+            const listVideo = Array.from(document.querySelectorAll(".tiktok-1s72ajp-DivWrapper > a"));
+            return listVideo.map(item => item.href).filter(x => x.includes('/video/'));
         });
         console.log(chalk.yellow(`[!] ${listVideo.length} video found`))
-        previousHeight = await page.evaluate("document.body.scrollHeight");
+        let previousHeight = await page.evaluate("document.body.scrollHeight");
+        console.log("Previous Web Height: " + previousHeight);
         await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-        await page.waitForFunction(`document.body.scrollHeight > ${previousHeight}`, { timeout: 10000 })
+        await page.waitForFunction(`document.body.scrollHeight > ${previousHeight}`, { timeout: 15000 })
             .catch(() => {
                 console.log(chalk.red("[X] No more video found"));
                 console.log(chalk.yellow(`[!] Total video found: ${listVideo.length}`))
                 loop = false
             });
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        await new Promise((resolve) => setTimeout(resolve, 3000));
     }
+
     await browser.close()
     return listVideo
 }
@@ -208,7 +220,7 @@ const getRedirectUrl = async (url) => {
         listVideo = await getListVideoByUsername(username);
         if (listVideo.length === 0) {
             console.log(chalk.red("[x] Error: No video found"));
-            exit();
+            process.exit();
         }
     } else if (choice.choice === "Mass Download with (txt)") {
         var urls = [];
@@ -218,7 +230,7 @@ const getRedirectUrl = async (url) => {
 
         if (!fs.existsSync(file)) {
             console.log(chalk.red("[X] Error: File not found"));
-            exit();
+            process.exit();
         }
 
         // read file line by line

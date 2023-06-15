@@ -1,4 +1,5 @@
 import { isMainThread, parentPort, workerData } from 'worker_threads';
+import chalk from 'chalk';
 import { Headers } from 'node-fetch';
 import fetch from 'node-fetch';
 import linq from 'linq';
@@ -16,7 +17,7 @@ const getIdVideo = (url) => {
     const matching = url.includes("/video/")
     if (!matching) {
         console.log(chalk.red("[X] Error: URL not found"));
-        exit();
+        process.exit();
     }
     const idVideo = url.substring(url.indexOf("/video/") + 7, url.length);
     return (idVideo.length > 19) ? idVideo.substring(0, idVideo.indexOf("?")) : idVideo;
