@@ -34,7 +34,7 @@ const downloadMediaFromList = async (list) => {
                 downloadFile.then(res => {
                     res.body.pipe(file)
                     file.on("finish", () => {
-                        file.close()
+                        file.close();
                         console.log(chalk.green(`[+] Downloaded: ${resolve(fileName)} `));
                     });
                     file.on("error", (err) => {
@@ -75,7 +75,7 @@ const downloadMediaFromList = async (list) => {
                         downloadFile.then(res => {
                             res.body.pipe(file);
                             file.on("finish", () => {
-                                file.close()
+                                file.close();
                                 console.log(chalk.green(`[+] Downloaded: ${resolve(fileName)} `));
                             });
                             file.on("error", (err) => {
