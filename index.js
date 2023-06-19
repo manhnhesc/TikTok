@@ -115,7 +115,8 @@ const getMediaInfoFromList = async (listVideo, type) => {
                     worker.on('error', (err) => { console.log(chalk.red(`[x] Thread #${worker.threadId} error: ${err}`)); });
                     worker.on('message', (msg) => {
                         console.log(chalk.green(`[+] Thread #${worker.threadId} running...`));
-                        resolve(msg);
+                        if (msg != undefined)
+                            resolve(msg);
                     });
                     worker.on('exit', (msg) => {
                         console.log(chalk.red(`[-] Thread #${worker.threadId} exiting...`));
@@ -132,7 +133,8 @@ const getMediaInfoFromList = async (listVideo, type) => {
                     worker.on('error', (err) => { console.log(chalk.red(`[x] Thread #${worker.threadId} error: ${err}`)); });
                     worker.on('message', (msg) => {
                         console.log(chalk.green(`[+] Thread #${worker.threadId} running...`));
-                        resolve(msg);
+                        if (msg != undefined)
+                            resolve(msg);
                     });
                     worker.on('exit', (msg) => {
                         console.log(chalk.red(`[-] Thread exiting...`));
@@ -171,7 +173,7 @@ const getListVideoByUsername = async (username) => {
     );
     await page.goto(baseUrl);
     var listVideo = [];
-    
+
     console.log(chalk.green("[+] Getting list video from: " + username));
     //console.log(chalk.green("[+] Verification capcha time: 10s"));
 

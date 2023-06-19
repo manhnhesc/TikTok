@@ -47,8 +47,8 @@ const getVideoNoWM = async (url) => {
         }
     } catch (err) {
         console.error("Error:", err);
-        console.error("VideoId:", idVideo);
-        console.error("Response body:", body);
+        console.error("Video URL:", url);
+        setTimeout(await getVideoWM(url), Math.random(3000,15000));
     }
     return data
 }
