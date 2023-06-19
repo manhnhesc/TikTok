@@ -112,7 +112,7 @@ const getMediaInfoFromList = async (listVideo, type) => {
             actions.push(new Promise((resolve) => {
                 const worker = new Worker('./fullWatermarkGetter', { workerData: elements });
                 try {
-                    worker.on('error', (err) => { console.log(chalk.red(`[x] Thread #${worker.threadId} error: ${err}`)); });
+                    worker.on('error', (error) => { console.log(chalk.red(`[x] Thread #${worker.threadId} error: ${JSON.stringify(error)}`)); });
                     worker.on('message', (msg) => {
                         console.log(chalk.green(`[+] Thread #${worker.threadId} running...`));
                         if (msg != undefined)
