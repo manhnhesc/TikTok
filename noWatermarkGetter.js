@@ -46,7 +46,7 @@ const getVideoNoWM = async (url) => {
             photo_urls: photo_urls
         }
     } catch (err) {
-        console.error("Error:", err);
+        console.error("[x] Getting media information error:", JSON.stringify(err));
         console.error("Video URL:", url);
         setTimeout(await getVideoNoWM(url), Math.random(3000,15000));
     }
