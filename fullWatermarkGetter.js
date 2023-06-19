@@ -32,23 +32,26 @@ const getVideoWM = async (url) => {
         headers: headers
     });
     const body = await request.text();
+    var data = undefined;
     try {
         var res = JSON.parse(body);
+        const urlMedia = res.aweme_list[0].video.download_addr.url_list[0]
+        let photo_displays = [];
+        let photo_urls = [];
+        if (res.aweme_list[0].image_post_info != undefined && res.aweme_list[0].image_post_info.images != undefined) {
+            photo_displays = linq.from(res.aweme_list[0].image_post_info.images).select(x => x.display_image).toArray();
+            photo_urls = linq.from(photo_displays).select(x => x.url_list[1]).toArray();
+        }
+        data = {
+            url: urlMedia,
+            id: idVideo,
+            photo_urls: photo_urls
+        }
+
     } catch (err) {
         console.error("Error:", err);
+        console.error("VideoId:", idVideo);
         console.error("Response body:", body);
-    }
-    const urlMedia = res.aweme_list[0].video.download_addr.url_list[0]
-    let photo_displays = [];
-    let photo_urls = [];    
-    if (res.aweme_list[0].image_post_info != undefined && res.aweme_list[0].image_post_info.images != undefined) {
-        photo_displays = linq.from(res.aweme_list[0].image_post_info.images).select(x => x.display_image).toArray();
-        photo_urls = linq.from(photo_displays).select(x => x.url_list[1]).toArray();
-    }
-    const data = {
-        url: urlMedia,
-        id: idVideo,
-        photo_urls: photo_urls
     }
     return data
 }
