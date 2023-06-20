@@ -216,6 +216,7 @@ const getRedirectUrl = async (url) => {
     const choice = await getChoice();
     var listVideo = [];
     var listMedia = [];
+    var fileInputName = '';
     if (choice.choice === "Mass Download (Username)") {
         const usernameInput = await getInput("Enter the username with @ (e.g. @username) : ");
         const username = usernameInput.input;
@@ -229,7 +230,7 @@ const getRedirectUrl = async (url) => {
         // Get URL from file
         const fileInput = await getInput("Enter the file path : ");
         const file = fileInput.input + '.txt';
-
+        fileInputName = file;
         if (!fs.existsSync(file)) {
             console.log(chalk.red("[X] Error: File not found"));
             process.exit();
@@ -272,5 +273,7 @@ const getRedirectUrl = async (url) => {
                 console.log(chalk.red("[X] Error: " + err));
             });
 
+
+    console.log(chalk.yellow(`${fileInputName} Finished Download`));
 
 })();
