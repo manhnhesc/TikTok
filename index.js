@@ -271,9 +271,12 @@ const getRedirectUrl = async (url) => {
             })
             .catch(err => {
                 console.log(chalk.red("[X] Error: " + err));
+            })
+            .finally(() => {
+                console.log(chalk.yellow(`${fileInputName} Finished Download`));
             });
 
 
-    console.log(chalk.yellow(`${fileInputName} Finished Download`));
+
 
 })();
