@@ -75,6 +75,8 @@ const downloadMediaFromList = async (listVideo) => {
             }
             threads.add(new Worker('./downloader', { workerData: elements }));
         }
+
+        var threadCount = 0;
         for (let worker of threads) {
             worker.on('error', (err) => { chalk.red(`[x] Thread downloader ${worker.threadId} error...\n`); });
             worker.on('exit', () => {
@@ -86,10 +88,12 @@ const downloadMediaFromList = async (listVideo) => {
             })
             worker.on('message', (msg) => {
                 console.log(chalk.green(`[+] Thread downloader ${worker.threadId} running...`));
+                threadCount += 1;
                 results.push(msg);
             });
-
         }
+        if(threadCount == threads.length)
+            console.log(chalk.yellow(`${fileInputName} Finished Download`));
     }
     return results;
 }
@@ -273,7 +277,7 @@ const getRedirectUrl = async (url) => {
                 console.log(chalk.red("[X] Error: " + err));
             })
             .finally(() => {
-                console.log(chalk.yellow(`${fileInputName} Finished Download`));
+                
             });
 
 
