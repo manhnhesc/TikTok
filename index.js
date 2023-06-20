@@ -58,7 +58,7 @@ const generateUrlProfile = (username) => {
     return baseUrl;
 };
 
-const downloadMediaFromList = async (listVideo) => {
+const downloadMediaFromList = async (listVideo, fileInputName) => {
     console.log(chalk.yellow(`[!] Found ${listVideo.length} media for downloading`))
     if (listVideo != undefined && listVideo.length > 0) {
         //number videos per thread
@@ -90,11 +90,10 @@ const downloadMediaFromList = async (listVideo) => {
                 console.log(chalk.green(`[+] Thread downloader ${threadCount}th #${worker.threadId} running...`));
                 threadCount += 1;
                 results.push(msg);
+                if (threadCount == (threads.size - 1))
+                    console.log(chalk.yellow(`${fileInputName} Finished Download`));
             });
         }
-        console.log(chalk.yellow(`Total ${threads.size} threads`));
-        if (threadCount == (threads.size - 1))
-            console.log(chalk.yellow(`${fileInputName} Finished Download`));
     }
     return results;
 }
@@ -270,7 +269,7 @@ const getRedirectUrl = async (url) => {
 
     //send to downloader function
     if (listMedia != undefined && listMedia.length > 0)
-        downloadMediaFromList(listMedia)
+        downloadMediaFromList(listMedia, fileInputName)
             .then(() => {
                 console.log(chalk.green("[+] Sent download list successfully"));
             })
