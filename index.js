@@ -87,12 +87,13 @@ const downloadMediaFromList = async (listVideo) => {
                 }
             })
             worker.on('message', (msg) => {
-                console.log(chalk.green(`[+] Thread downloader ${worker.threadId} running...`));
+                console.log(chalk.green(`[+] Thread downloader ${threadCount}th #${worker.threadId} running...`));
                 threadCount += 1;
                 results.push(msg);
             });
         }
-        if(threadCount == threads.length)
+        console.log(chalk.yellow(`Total ${threads.size} threads`));
+        if (threadCount == (threads.size - 1))
             console.log(chalk.yellow(`${fileInputName} Finished Download`));
     }
     return results;
@@ -277,7 +278,7 @@ const getRedirectUrl = async (url) => {
                 console.log(chalk.red("[X] Error: " + err));
             })
             .finally(() => {
-                
+
             });
 
 
