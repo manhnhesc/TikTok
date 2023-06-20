@@ -80,18 +80,19 @@ const downloadMediaFromList = async (listVideo, fileInputName) => {
         for (let worker of threads) {
             worker.on('error', (err) => { chalk.red(`[x] Thread downloader ${worker.threadId} error...\n`); });
             worker.on('exit', () => {
-                //console.log(chalk.green(`[+] Thread downloader ${worker.threadId} exiting...`));
+                threadCount += 1;
+                if (threadCount == (threads.size - 1))
+                    console.log(chalk.yellow(`[+] Finished Download ${fileInputName} `));
                 threads.delete(worker);
                 if (threads.size === 0) {
                     results.push('\n');
                 }
+
+
             })
             worker.on('message', (msg) => {
                 console.log(chalk.green(`[+] Thread downloader ${threadCount}th #${worker.threadId} running...`));
-                threadCount += 1;
                 results.push(msg);
-                if (threadCount == (threads.size - 1))
-                    console.log(chalk.yellow(`${fileInputName} Finished Download`));
             });
         }
     }
