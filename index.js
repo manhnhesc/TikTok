@@ -91,7 +91,7 @@ const downloadMediaFromList = async (listVideo, fileInputName) => {
 
             })
             worker.on('message', (msg) => {
-                console.log(chalk.green(`[+] Thread downloader ${threadCount}th #${worker.threadId} running...`));
+                console.log(chalk.green(`[+] Thread downloader #${worker.threadId} running...`));
                 results.push(msg);
             });
         }
