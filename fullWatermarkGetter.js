@@ -50,7 +50,7 @@ const getVideoWM = async (url) => {
             url: urlMedia,
             id: idVideo,
             photo_urls: photo_urls,
-            uniqueId: uniqueId + '/'
+            uniqueId: uniqueId
         }
 
     } catch (err) {

@@ -23,14 +23,19 @@ const downloadMediaFromList = async (list) => {
         fs.mkdirSync(folder);
     }
 
-
     list.forEach((item) => {
         try {
+            let folderUnique = folder + item.uniqueId + '/';
+
+            if (!fs.existsSync(folderUnique)) {
+                fs.mkdirSync(folderUnique);
+            }
+
 
             if (item.url != undefined) {
                 const fileName = `${item.id}.mp4`
                 const downloadFile = fetch(item.url, { headers: headers });
-                const file = fs.createWriteStream(folder + item.uniqueId + fileName)
+                const file = fs.createWriteStream(folderUnique + fileName)
                 downloadFile.then(res => {
                     res.body.pipe(file)
                     file.on("finish", () => {
@@ -47,7 +52,7 @@ const downloadMediaFromList = async (list) => {
                     item.photo_urls.forEach(nestItem => {
                         const fileName = `${item.id}_${c}.jpeg`
                         const downloadFile = fetch(nestItem)
-                        const file = fs.createWriteStream(folder + item.uniqueId + fileName)
+                        const file = fs.createWriteStream(folderUnique + fileName)
 
                         downloadFile.then(res => {
                             res.body.pipe(file);
@@ -70,7 +75,7 @@ const downloadMediaFromList = async (list) => {
                     item.photo_urls.forEach(nestItem => {
                         const fileName = `${item.id}_${c}.jpeg`
                         const downloadFile = fetch(nestItem)
-                        const file = fs.createWriteStream(folder + item.uniqueId + fileName)
+                        const file = fs.createWriteStream(folderUnique + fileName)
 
                         downloadFile.then(res => {
                             res.body.pipe(file);

@@ -48,7 +48,7 @@ const getVideoNoWM = async (url) => {
             url: urlMedia,
             id: idVideo,
             photo_urls: photo_urls,
-            uniqueId: uniqueId + '/'
+            uniqueId: uniqueId
         }
     } catch (err) {
         console.error("[x] Getting media information error:", JSON.stringify(err));
