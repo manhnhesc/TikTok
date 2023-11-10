@@ -38,6 +38,10 @@ const getVideoWM = async (url) => {
         const urlMedia = res.aweme_list[0].video.download_addr.url_list[0]
         let photo_displays = [];
         let photo_urls = [];
+        let uniqueId = res.aweme_list[0].author.unique_id;
+        if (!uniqueId) {
+            uniqueId = 'TempFolder';
+        }
         if (res.aweme_list[0].image_post_info != undefined && res.aweme_list[0].image_post_info.images != undefined) {
             photo_displays = linq.from(res.aweme_list[0].image_post_info.images).select(x => x.display_image).toArray();
             photo_urls = linq.from(photo_displays).select(x => x.url_list[1]).toArray();
@@ -45,13 +49,14 @@ const getVideoWM = async (url) => {
         data = {
             url: urlMedia,
             id: idVideo,
-            photo_urls: photo_urls
+            photo_urls: photo_urls,
+            uniqueId: uniqueId + '/'
         }
 
     } catch (err) {
         console.error("[x] Getting media information error:", JSON.stringify(err));
         console.error("[!] Video URL:", url);
-        setTimeout(await getVideoWM(url), Math.random(3000,15000));
+        setTimeout(await getVideoWM(url), Math.random(3000, 15000));
     }
     return data
 }
